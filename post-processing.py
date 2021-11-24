@@ -33,6 +33,8 @@ def find_orientation(dir, file):
         center = find_mass_center(contour)
         point = find_closest_contour_point(contour, center)
 
+        # TODO: calculate the slope of the line between center and point
+
 
         exit()
 
