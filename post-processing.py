@@ -6,40 +6,46 @@ import numpy as np
 from cv2 import cv2
 
 
-DIR = 'C:/Users/Admin/Desktop/tmp'
-FILE = '0.png'
+img_path = 'C:/Users/Admin/Desktop/tmp/4.png'
 
 
 def main():
-    find_mass_center(DIR, FILE)
+    results = find_center_and_orientation(img_path)
+    print(results)
 
-def find_orientation(dir, file):
-    img = cv2.imread(os.path.join(dir, file))
+
+def find_center_and_orientation(img_path):
+    img = cv2.imread(img_path)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    img[img == 170] = 0  # make background black
-    img[img == 29] = 220  # make masks bright
+
+    img[img == 170] = 0  # make background black, TODO: Why findContours doesn't work with another font?
+
 
     # convert the grayscale image to binary image
     # ret, thresh = cv2.threshold(img, 75, 255, 0)  # not needed yet
-
     contours, hierarchy = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
 
+    results = {}
+
+    num = 0
     for contour in contours:
         area = cv2.contourArea(contour)
         if area < 100:
             continue
         # contoured = cv2.drawContours(empty_img, [c], -1, 100, thickness=-1)
-
         center = find_mass_center(contour)
-        point = find_closest_contour_point(contour, center)
+        class_pixel_value = img[center[1], center[0]]
+        closest_point = find_closest_contour_point(contour, center)
+        cv2.line(img, center, closest_point, 255)  # for visualization only
+        angle = find_angle(center, closest_point)
+        to_append = [center[0], center[1], angle]
+        results.setdefault(class_pixel_value, []).append(to_append)
+        print('{}. {}  {}  {}'.format(num, center, closest_point, angle))
+        num += 1
+    return results
 
-        # TODO: calculate the slope of the line between center and point
-
-
-        exit()
-
-
-def find_closest_contour_point(contour, center):
+# Faster, but buggy -- can't always find closest point
+def find_closest_contour_point_buggy(contour, center):
     # Find the distance between closest contour point and center
     shortest_distance = cv2.pointPolygonTest(contour, center, True)
     # Compare shortest distance with distance between each contour point and center
@@ -47,11 +53,10 @@ def find_closest_contour_point(contour, center):
         point = entry[0]
         distance = find_distance(point, center)
         if distance == shortest_distance:
-            return point
+            return list(point)
 
 
-# A bit slower
-def find_closest_contour_point_1(contour, center):
+def find_closest_contour_point(contour, center):
     shortest_distance = 9999
     closest_point = 0
     for entry in contour:
@@ -60,7 +65,7 @@ def find_closest_contour_point_1(contour, center):
         if distance < shortest_distance:
             shortest_distance = distance
             closest_point = point
-    return closest_point
+    return list(closest_point)
 
 
 def find_mass_center(contour):
@@ -74,6 +79,15 @@ def find_distance(point_1, point_2):
     y1, x1 = point_1
     y2, x2 = point_2
     return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+
+
+def find_angle(p1, p2):
+    p1_x, p1_y = p1
+    p2_x, p2_y = p2
+    delta_x = p2_x - p1_x
+    delta_y = p2_y - p1_y
+    angle_in_degrees = round(math.atan2(delta_y, delta_x) * 180 / math.pi)
+    return angle_in_degrees
 
 
 # Not needed:
