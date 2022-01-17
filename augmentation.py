@@ -63,6 +63,12 @@ TEST_PORTION = VALIDATION_PORTION = (1 - TRAIN_PORTION) / 2
 def main():
     start = time.time()
 
+    src_img = 'C:/Users/Admin/Desktop/src/img'
+    src_mask = 'C:/Users/Admin/Desktop/src/mask'
+    trg_img = 'C:/Users/Admin/Desktop/trg/img'
+    trg_mask = 'C:/Users/Admin/Desktop/trg/mask'
+    shift_and_save(src_img, src_mask, trg_img, trg_mask, SHIFT_RATIO)
+
     # 1. rotate captured
     # paths = (IMG, MASK, IMG_ROT, MASK_ROT)
     # rotate_and_save(*paths)
@@ -97,7 +103,7 @@ def main():
 
     # Read all images and masks, shuffle, split into train, test and validation.
     # Copy to corresponding directories of the ENet project.
-    feed_data_to_project(ALL_IMG, ALL_MASK)
+    # feed_data_to_project(ALL_IMG, ALL_MASK)
 
     print(time.time() - start)
 
@@ -375,8 +381,8 @@ def shift_and_save(source_img_dir, source_mask_dir, target_img_dir, target_mask_
             img_shift = shifted[i][0]
             mask_shift = shifted[i][1]
             name_shift = '{}_s_{}_{}.png'.format(file_name.split('.')[0], shift_ratio, directions[i])
-            cv2.imwrite(os.path.join(target_img_dir, name_shift), img_shift)
-            cv2.imwrite(os.path.join(target_mask_dir, name_shift), mask_shift)
+            img_ok = cv2.imwrite(os.path.join(target_img_dir, name_shift), img_shift)
+            mask_ok = cv2.imwrite(os.path.join(target_mask_dir, name_shift), mask_shift)
 
 
 def v(image):

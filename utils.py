@@ -1,8 +1,13 @@
 from collections import OrderedDict
 
+from cv2 import cv2 as cv2
+
 
 def main():
-    print_times_and_improvements((0.0547, 0.8225, 0.0278, 0.9188))
+    rgb_path = 'c:/users/admin/desktop/rgb.png'
+    gray_path = 'c:/users/admin/desktop/gray.png'
+    # print_times_and_improvements((0.0547, 0.8225, 0.0278, 0.9188))
+    rgb_to_gray(rgb_path, gray_path)
     # tmp()
 
 
@@ -55,6 +60,12 @@ def tmp():
 
     colors = list(color_encoding.values())
     print(colors)
+
+
+def rgb_to_gray(rgb_path, gray_path):
+    image = cv2.imread(rgb_path)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    cv2.imwrite(gray_path, gray)
 
 
 if __name__ == '__main__':

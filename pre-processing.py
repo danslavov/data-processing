@@ -25,6 +25,8 @@ DIM_RESIZED = (525, 525)
 # background_img_middle_name = 'background_middle_1.png'
 # background_img_end_name = 'background_end_1.png'
 
+# NB: InteractLabeler doesn't work with gray images, only RGB.
+# Therefore, pre-processing should not output gray images.
 
 def main():
     start = time.time()
@@ -33,11 +35,13 @@ def main():
     # rename_and_accumulate(SOURCE_DIR, DEST_DIR, CLASS_TYPE)  # gather all images/masks in one folder with unique names
     # path = (SOURCE_DIR_IMG, SOURCE_DIR_MASK, DEST_DIR_IMG, DEST_DIR_MASK)
     # resize(*path, DIM_RESIZED)
-    # count_files_by_class('C:/Users/Admin/PycharmProjects/ENet-PyTorch-davidtvs/data/Elements/test')
+    count_files_by_class('C:/Users/Admin/PycharmProjects/ENet-PyTorch-davidtvs/data/Elements/train')
 
-    dir = 'C:/Users/Admin/Desktop/tmp'
-    file = '0.png'
-    refine_output(dir, file)
+    # dir = 'C:/Users/Admin/Desktop'
+    # refine_masks(dir, dir)
+
+    # subtract_background_one_image()
+    # remove_shadows_one_image()
 
     print(time.time() - start)
 
@@ -68,7 +72,7 @@ def s(image):
 # cv2.destroyAllWindows()
 
 
-# *****************   REMOVE BACKGROUND   *****************
+# *****************   REMOVE BACKGROUND  --  not for InteractLabeler   *****************
 # # load image
 # img = cv2.imread(os.path.join(DIR_ORIG, filename))
 #
@@ -215,34 +219,11 @@ def s(image):
 #         print("Can't write")
 #         break
 # exit()
-# ************************************************************************************
 #
-# *****************   SMOOTHEN AND OVERLAY MASK OVER IMAGE   *************************
-# # Apply several operations with the mask wile each time overlaying it over the image.
-# # For representation purposes.
-# img_orig = cv2.imread('C:/Users/Admin/Desktop/111/43.png')
-# mask = cv2.imread('C:/Users/Admin/Desktop/111/43_L.png')
-# # dst = cv2.addWeighted(img_orig, 1, mask, 0.4, 5)
-# # cv2.imwrite('C:/Users/Admin/Desktop/111/over/43_L.png', dst)
-# kernel = np.ones((3, 3), np.uint8)
-# mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-# mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-# cv2.imwrite('C:/Users/Admin/Desktop/111/43_oc.png', mask)
-# dst = cv2.addWeighted(img_orig, 1, mask, 0.4, 5)
-# cv2.imwrite('C:/Users/Admin/Desktop/111/over/43_oc.png', dst)
-# mask = cv2.GaussianBlur(mask, (0, 0), sigmaX=2, sigmaY=2, borderType=cv2.BORDER_DEFAULT)
-# cv2.imwrite('C:/Users/Admin/Desktop/111/43_blur.png', mask)
-# dst = cv2.addWeighted(img_orig, 1, mask, 0.4, 5)
-# cv2.imwrite('C:/Users/Admin/Desktop/111/over/43_blur.png', dst)
-# mask = (2 * (mask.astype(np.float32)) - 255.0).clip(0, 255).astype(np.uint8)
-# cv2.imwrite('C:/Users/Admin/Desktop/111/43_stretch.png', mask)
-# dst = cv2.addWeighted(img_orig, 1, mask, 0.4, 5)  # this is the best
-# cv2.imwrite('C:/Users/Admin/Desktop/111/over/43_stretch.png', dst)
-# exit()
 # ************************************************************************************
-#
 # *****************   F U N C T I O N S   ********************************************
 
+# TODO: purpose and usage?
 def refine_output(dir, file):
     path = os.path.join(dir, file)
     img = cv2.imread(path)
@@ -258,7 +239,6 @@ def refine_output(dir, file):
     cv2.drawContours(img_contours, contours, -1, (0, 0, 255), 1)
     # save image
     cv2.imwrite(os.path.join(dir, 'cont.png'), img_contours)
-
 
 
 def count_files_by_class(location):
@@ -281,30 +261,34 @@ def count_files_by_class(location):
 
 
 def refine_masks(source_dir, destination_dir):
-    for file_name in os.listdir(source_dir):
-        mask = cv2.imread(os.path.join(source_dir, file_name))
 
-        # Apply OPEN-CLOSE (introduces some non-class-specific pixel values)
-        kernel = np.ones((3, 3), np.uint8)
-        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    file_name = 'mask.png'
 
-        # All pixels values which don't belong to a class (incl. background),
-        # are changed to background
-        blue = [255, 0, 0]  # capacitor
-        red = [0, 0, 255]  # capacitor-flat
-        yellow = [0, 255, 255]  # resistor
-        green = [0, 255, 0]  # not used
-        grey = [170, 170, 170]  # background
-        cond_blue = (mask == blue).all(axis=2)
-        cond_red = (mask == red).all(axis=2)
-        cond_yellow = (mask == yellow).all(axis=2)
-        cond_green = (mask == green).all(axis=2)
+    # for file_name in os.listdir(source_dir):
+    mask = cv2.imread(os.path.join(source_dir, file_name))
 
-        # If pixels are not blue, red, yellow or green, turn them to grey:
-        condition = np.invert((np.logical_or(np.logical_or(np.logical_or(cond_blue, cond_red), cond_yellow), cond_green)))
-        mask[np.where(condition)] = grey
-        cv2.imwrite(os.path.join(destination_dir, file_name), mask)
+    # Apply OPEN-CLOSE (introduces some non-class-specific pixel values)
+    kernel = np.ones((3, 3), np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+
+    # All pixels values which don't belong to a class (incl. background),
+    # are changed to background
+    blue = [255, 0, 0]  # capacitor
+    red = [0, 0, 255]  # capacitor-flat
+    yellow = [0, 255, 255]  # resistor
+    green = [0, 255, 0]  # not used
+    grey = [170, 170, 170]  # background
+    cond_blue = (mask == blue).all(axis=2)
+    cond_red = (mask == red).all(axis=2)
+    cond_yellow = (mask == yellow).all(axis=2)
+    cond_green = (mask == green).all(axis=2)
+
+    # If pixels are not blue, red, yellow or green, turn them to grey:
+    condition = np.invert((np.logical_or(np.logical_or(np.logical_or(cond_blue, cond_red), cond_yellow), cond_green)))
+    mask[np.where(condition)] = grey
+    file_name = 'res.png'
+    cv2.imwrite(os.path.join(destination_dir, file_name), mask)
 
 
 def overlay(img_dir, mask_dir, destination_dir):
@@ -330,6 +314,55 @@ def resize(source_dir_img, source_dir_mask, dest_dir_img, dest_dir_mask, target_
         resized_mask = cv2.resize(mask, target_dimension)
         cv2.imwrite(os.path.join(dest_dir_img, file_name), resized_img)
         cv2.imwrite(os.path.join(dest_dir_mask, file_name), resized_mask)
+
+
+def subtract_background_one_image():
+    dir = 'C:/Users/Admin/Desktop'
+    cropped = 'mixed_75.png'
+    back = 'background_middle_2.png'
+
+    img = cv2.imread(os.path.join(dir, cropped))
+    background = cv2.imread(os.path.join(dir, back))
+    result = cv2.subtract(background, img)
+    cv2.imwrite(os.path.join(dir, 'result.png'), result)
+
+
+def remove_shadows_one_image():
+    threshold = 75
+    dir = 'C:/Users/Admin/Desktop'
+    file_name = 'result.png'
+    img = cv2.imread(os.path.join(dir, file_name))
+    lower = (0, 0, 0)
+    upper = (threshold, threshold, threshold)
+    mask = cv2.inRange(img, lower, upper)
+    img[mask != 0] = [0, 0, 0]
+    result = cv2.imwrite(os.path.join(dir, 'result.png'), img)
+    if not result:
+        print("Can't write")
+
+
+# # Apply several operations with the mask wile each time overlaying it over the image.
+# # For representation purposes.
+# Not used in practice, since blur introduces pixels with different values (not class-specific).
+def smoothen_and_overlay_mask_over_image():
+    img_orig = cv2.imread('C:/Users/Admin/Desktop/mixed_13_r_90_f.png')
+    mask = cv2.imread('C:/Users/Admin/Desktop/mask.png')
+    # dst = cv2.addWeighted(img_orig, 1, mask, 0.4, 5)
+    # cv2.imwrite('C:/Users/Admin/Desktop/res/over/mask_L.png', dst)
+    kernel = np.ones((3, 3), np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    cv2.imwrite('C:/Users/Admin/Desktop/res/mask_oc.png', mask)
+    dst = cv2.addWeighted(img_orig, 1, mask, 0.4, 5)
+    cv2.imwrite('C:/Users/Admin/Desktop/res/over/mask_oc.png', dst)
+    mask = cv2.GaussianBlur(mask, (0, 0), sigmaX=2, sigmaY=2, borderType=cv2.BORDER_DEFAULT)
+    cv2.imwrite('C:/Users/Admin/Desktop/res/mask_blur.png', mask)
+    dst = cv2.addWeighted(img_orig, 1, mask, 0.4, 5)
+    cv2.imwrite('C:/Users/Admin/Desktop/res/over/mask_blur.png', dst)
+    mask = (2 * (mask.astype(np.float32)) - 255.0).clip(0, 255).astype(np.uint8)
+    cv2.imwrite('C:/Users/Admin/Desktop/res/mask_stretch.png', mask)
+    dst = cv2.addWeighted(img_orig, 1, mask, 0.4, 5)  # this is the best
+    cv2.imwrite('C:/Users/Admin/Desktop/res/over/mask_stretch.png', dst)
 
 
 if __name__ == '__main__':
